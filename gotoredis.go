@@ -93,6 +93,6 @@ func (mapper StructMapper) Load(id string, obj interface{}) error {
 	return nil
 }
 
-func (StructMapper) Close() error {
-	return nil
+func (mapper StructMapper) Close() error {
+	return mapper.client.Close()
 }
