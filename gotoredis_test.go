@@ -33,17 +33,14 @@ var _ = Describe("saving objects in Redis", func() {
 
 			var id string
 			var saveErr error
-			var stringValue string
-			var uint64Value uint64
+			var savedStruct SimpleStruct
 
 			BeforeEach(func() {
-				stringValue = "some string"
-				uint64Value = 25
-				toBeSaved := SimpleStruct{
-					String: stringValue,
-					Uint64: uint64Value,
+				savedStruct = SimpleStruct{
+					String: "some string",
+					Uint64: 25,
 				}
-				id, saveErr = g.Save(toBeSaved)
+				id, saveErr = g.Save(savedStruct)
 			})
 
 			It("does not error", func() {
@@ -52,23 +49,19 @@ var _ = Describe("saving objects in Redis", func() {
 
 			Context("when the struct is retrieved", func() {
 
-				var retrievedObj SimpleStruct
+				var retrievedStruct SimpleStruct
 				var retrieveErr error
 
 				BeforeEach(func() {
-					retrieveErr = g.Load(id, &retrievedObj)
+					retrieveErr = g.Load(id, &retrievedStruct)
 				})
 
 				It("does not error", func() {
 					Expect(retrieveErr).ToNot(HaveOccurred())
 				})
 
-				It("retrieves string values", func() {
-					Expect(retrievedObj.String).To(Equal(stringValue))
-				})
-
-				It("retrieves uint64 values", func() {
-					Expect(retrievedObj.Uint64).To(Equal(uint64Value))
+				It("populates struct fields", func() {
+					Expect(retrievedStruct).To(Equal(savedStruct))
 				})
 			})
 		})
