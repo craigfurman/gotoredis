@@ -8,7 +8,7 @@ import (
 )
 
 type SimpleStruct struct {
-	Name string
+	String string
 }
 
 var _ = Describe("saving objects in Redis", func() {
@@ -37,7 +37,7 @@ var _ = Describe("saving objects in Redis", func() {
 			BeforeEach(func() {
 				stringValue = "some string"
 				toBeSaved := SimpleStruct{
-					Name: stringValue,
+					String: stringValue,
 				}
 				id, saveErr = g.Save(toBeSaved)
 			})
@@ -60,7 +60,7 @@ var _ = Describe("saving objects in Redis", func() {
 				})
 
 				It("rebuilds fields on struct", func() {
-					Expect(retrievedObj.Name).To(Equal(stringValue))
+					Expect(retrievedObj.String).To(Equal(stringValue))
 				})
 			})
 		})
