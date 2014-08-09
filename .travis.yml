@@ -3,6 +3,9 @@ language: go
 go:
   - 1.3
 
+services:
+  - redis-server
+
 install:
   - go get -v code.google.com/p/go-uuid/uuid
   - go get -v github.com/fzzy/radix/redis

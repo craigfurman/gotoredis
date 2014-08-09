@@ -19,7 +19,7 @@ var _ = Describe("saving objects in Redis", func() {
 	Context("when Redis is running on expected host and port", func() {
 
 		BeforeEach(func() {
-			client, err := gotoredis.New("localhost:4567")
+			client, err := gotoredis.New("localhost:6379")
 			g = client
 			Expect(err).ToNot(HaveOccurred())
 		})
