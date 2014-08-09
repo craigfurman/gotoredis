@@ -22,6 +22,11 @@ var _ = Describe("saving objects in Redis", func() {
 			g = gotoredis.New("localhost:4567")
 		})
 
+		AfterEach(func() {
+			err := g.Close()
+			Expect(err).ToNot(HaveOccurred())
+		})
+
 		Context("when a struct is saved", func() {
 
 			var id int

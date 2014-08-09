@@ -17,3 +17,7 @@ func (StructMapper) Save(obj interface{}) (int, error) {
 func (StructMapper) Load(id int) (interface{}, error) {
 	return nil, nil
 }
+
+func (StructMapper) Close() error {
+	return nil
+}
