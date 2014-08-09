@@ -7,9 +7,9 @@ install:
   - go get -v code.google.com/p/go-uuid/uuid
   - go get -v github.com/fzzy/radix/redis
   - go get -v github.com/onsi/ginkgo
-  - go install github.com/onsi/ginkgo
+  - go install github.com/onsi/ginkgo/ginkgo
   - go get -v github.com/onsi/gomega
   - go get -v -t ./...
   - export PATH=$PATH:$HOME/gopath/bin
 
-script: ginkgo -r --randomizeAllSpecs --randomizeSuites --failOnPending --cover --trace --race
+script: $HOME/gopath/bin/ginkgo -r --randomizeAllSpecs --randomizeSuites --failOnPending --cover --trace --race
