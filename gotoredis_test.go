@@ -9,6 +9,7 @@ import (
 
 type SimpleStruct struct {
 	String string
+	Uint64 uint64
 }
 
 var _ = Describe("saving objects in Redis", func() {
@@ -33,11 +34,14 @@ var _ = Describe("saving objects in Redis", func() {
 			var id string
 			var saveErr error
 			var stringValue string
+			var uint64Value uint64
 
 			BeforeEach(func() {
 				stringValue = "some string"
+				uint64Value = 25
 				toBeSaved := SimpleStruct{
 					String: stringValue,
+					Uint64: uint64Value,
 				}
 				id, saveErr = g.Save(toBeSaved)
 			})
@@ -59,8 +63,12 @@ var _ = Describe("saving objects in Redis", func() {
 					Expect(retrieveErr).ToNot(HaveOccurred())
 				})
 
-				It("rebuilds fields on struct", func() {
+				It("retrieves string values", func() {
 					Expect(retrievedObj.String).To(Equal(stringValue))
+				})
+
+				It("retrieves uint64 values", func() {
+					Expect(retrievedObj.Uint64).To(Equal(uint64Value))
 				})
 			})
 		})

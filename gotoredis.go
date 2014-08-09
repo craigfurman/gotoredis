@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strconv"
 
 	"code.google.com/p/go-uuid/uuid"
 	"github.com/fzzy/radix/redis"
@@ -32,7 +33,11 @@ func (mapper StructMapper) Save(obj interface{}) (string, error) {
 	for i := 0; i < structType.NumField(); i++ {
 		field := structType.Field(i)
 		value := toPersist.FieldByName(field.Name)
-		reply := mapper.client.Cmd("HSET", id, field.Name, value)
+		valueAsString, err := stringValue(value)
+		if err != nil {
+			return "", err
+		}
+		reply := mapper.client.Cmd("HSET", id, field.Name, valueAsString)
 		insertCount, err := reply.Int()
 		if err != nil {
 			return "", err
@@ -43,6 +48,19 @@ func (mapper StructMapper) Save(obj interface{}) (string, error) {
 	}
 
 	return id, nil
+}
+
+func stringValue(value reflect.Value) (string, error) {
+	switch value.Kind() {
+	case reflect.String:
+		return value.String(), nil
+
+	case reflect.Uint64:
+		return fmt.Sprintf("%d", value.Uint()), nil
+
+	default:
+		return "", errors.New("Unsupported Type")
+	}
 }
 
 func (mapper StructMapper) Load(id string, obj interface{}) error {
@@ -57,8 +75,19 @@ func (mapper StructMapper) Load(id string, obj interface{}) error {
 	typeToInflate := structToInflate.Type()
 	for i := 0; i < typeToInflate.NumField(); i++ {
 		field := typeToInflate.Field(i)
+		structFieldToInflate := structToInflate.FieldByName(field.Name)
 		value := responseParts[field.Name]
-		structToInflate.FieldByName(field.Name).SetString(value)
+		switch field.Type.Kind() {
+		case reflect.String:
+			structFieldToInflate.SetString(value)
+
+		case reflect.Uint64:
+			valueAsUint, err := strconv.ParseUint(value, 10, 64)
+			if err != nil {
+				return err
+			}
+			structFieldToInflate.SetUint(valueAsUint)
+		}
 	}
 
 	return nil
