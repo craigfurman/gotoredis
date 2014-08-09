@@ -29,10 +29,9 @@ var _ = Describe("saving objects in Redis", func() {
 			Expect(err).ToNot(HaveOccurred())
 		})
 
-		Context("when a struct is saved", func() {
+		Context("when a struct has already been saved in Redis", func() {
 
 			var id string
-			var saveErr error
 			var savedStruct SimpleStruct
 
 			BeforeEach(func() {
@@ -40,14 +39,26 @@ var _ = Describe("saving objects in Redis", func() {
 					String: "some string",
 					Uint64: 25,
 				}
-				id, saveErr = g.Save(savedStruct)
+				var err error
+				id, err = g.Save(savedStruct)
+				Expect(err).ToNot(HaveOccurred())
 			})
 
-			It("does not error", func() {
-				Expect(saveErr).ToNot(HaveOccurred())
+			Describe("retrieving structs", func() {
+
+				var retrievedStruct SimpleStruct
+
+				BeforeEach(func() {
+					err := g.Load(id, &retrievedStruct)
+					Expect(err).ToNot(HaveOccurred())
+				})
+
+				It("populates struct fields", func() {
+					Expect(retrievedStruct).To(Equal(savedStruct))
+				})
 			})
 
-			Context("when the struct is updated", func() {
+			Describe("updating structs", func() {
 
 				BeforeEach(func() {
 					savedStruct.String = "a new value"
@@ -63,32 +74,14 @@ var _ = Describe("saving objects in Redis", func() {
 				})
 			})
 
-			Context("when the struct is retrieved", func() {
-
-				var retrievedStruct SimpleStruct
-				var retrieveErr error
-
-				BeforeEach(func() {
-					retrieveErr = g.Load(id, &retrievedStruct)
-				})
-
-				It("does not error", func() {
-					Expect(retrieveErr).ToNot(HaveOccurred())
-				})
-
-				It("populates struct fields", func() {
-					Expect(retrievedStruct).To(Equal(savedStruct))
-				})
-			})
-
-			Context("when the struct is deleted", func() {
+			Describe("deleting structs", func() {
 
 				BeforeEach(func() {
 					err := g.Delete(id)
 					Expect(err).ToNot(HaveOccurred())
 				})
 
-				It("struct cannot be retrieved from Redis", func() {
+				It("cannot be retrieved from Redis", func() {
 					var retrievedStruct SimpleStruct
 					g.Load(id, &retrievedStruct)
 					Expect(retrievedStruct).ToNot(Equal(savedStruct))
