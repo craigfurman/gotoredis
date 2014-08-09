@@ -47,6 +47,22 @@ var _ = Describe("saving objects in Redis", func() {
 				Expect(saveErr).ToNot(HaveOccurred())
 			})
 
+			Context("when the struct is updated", func() {
+
+				BeforeEach(func() {
+					savedStruct.String = "a new value"
+					err := g.Update(id, savedStruct)
+					Expect(err).ToNot(HaveOccurred())
+				})
+
+				It("updates the struct", func() {
+					var retrievedStruct SimpleStruct
+					err := g.Load(id, &retrievedStruct)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(retrievedStruct).To(Equal(savedStruct))
+				})
+			})
+
 			Context("when the struct is retrieved", func() {
 
 				var retrievedStruct SimpleStruct

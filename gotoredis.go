@@ -27,20 +27,28 @@ func New(redisEndpoint string) (*StructMapper, error) {
 
 func (mapper StructMapper) Save(obj interface{}) (string, error) {
 	id := uuid.New()
+	return id, mapper.persist(id, obj, false)
+}
+
+func (mapper StructMapper) Update(id string, obj interface{}) error {
+	return mapper.persist(id, obj, true)
+}
+
+func (mapper StructMapper) persist(id string, obj interface{}, isUpdate bool) error {
 	toPersist := reflect.ValueOf(obj)
 	structType := toPersist.Type()
 	for i := 0; i < structType.NumField(); i++ {
 		field := structType.Field(i)
 		fieldValue := toPersist.FieldByName(field.Name)
-		err := mapper.insertFieldIntoRedis(id, field.Name, fieldValue)
+		err := mapper.insertFieldIntoRedis(id, field.Name, fieldValue, isUpdate)
 		if err != nil {
-			return "", err
+			return err
 		}
 	}
-	return id, nil
+	return nil
 }
 
-func (mapper StructMapper) insertFieldIntoRedis(id, fieldName string, fieldValue reflect.Value) error {
+func (mapper StructMapper) insertFieldIntoRedis(id, fieldName string, fieldValue reflect.Value, isUpdate bool) error {
 	fieldValueAsString, err := convertFieldValueToString(fieldValue)
 	if err != nil {
 		return err
@@ -50,7 +58,14 @@ func (mapper StructMapper) insertFieldIntoRedis(id, fieldName string, fieldValue
 	if err != nil {
 		return err
 	}
-	if insertCount != 1 {
+
+	var expectedNewRows int = -1
+	if isUpdate {
+		expectedNewRows = 0
+	} else {
+		expectedNewRows = 1
+	}
+	if insertCount != expectedNewRows {
 		return errors.New(fmt.Sprint("Insert count should have been 1 but was %d", insertCount))
 	}
 	return nil
