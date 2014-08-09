@@ -9,7 +9,6 @@ import (
 
 type SimpleStruct struct {
 	Name string
-	Id   int
 }
 
 var _ = Describe("saving objects in Redis", func() {
@@ -19,7 +18,9 @@ var _ = Describe("saving objects in Redis", func() {
 	Context("when Redis is running on expected host and port", func() {
 
 		BeforeEach(func() {
-			g = gotoredis.New("localhost:4567")
+			client, err := gotoredis.New("localhost:4567")
+			g = client
+			Expect(err).ToNot(HaveOccurred())
 		})
 
 		AfterEach(func() {
@@ -29,13 +30,14 @@ var _ = Describe("saving objects in Redis", func() {
 
 		Context("when a struct is saved", func() {
 
-			var id int
+			var id string
 			var saveErr error
+			var stringValue string
 
 			BeforeEach(func() {
-				value := "some string"
+				stringValue = "some string"
 				toBeSaved := SimpleStruct{
-					Name: value,
+					Name: stringValue,
 				}
 				id, saveErr = g.Save(toBeSaved)
 			})
@@ -46,15 +48,19 @@ var _ = Describe("saving objects in Redis", func() {
 
 			Context("when the struct is retrieved", func() {
 
-				var retrievedObj interface{}
+				var retrievedObj SimpleStruct
 				var retrieveErr error
 
 				BeforeEach(func() {
-					retrievedObj, retrieveErr = g.Load(id)
+					retrieveErr = g.Load(id, &retrievedObj)
 				})
 
 				It("does not error", func() {
 					Expect(retrieveErr).ToNot(HaveOccurred())
+				})
+
+				It("rebuilds fields on struct", func() {
+					Expect(retrievedObj.Name).To(Equal(stringValue))
 				})
 			})
 		})
