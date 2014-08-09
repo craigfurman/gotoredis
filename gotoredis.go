@@ -27,30 +27,36 @@ func New(redisEndpoint string) (*StructMapper, error) {
 
 func (mapper StructMapper) Save(obj interface{}) (string, error) {
 	id := uuid.New()
-
 	toPersist := reflect.ValueOf(obj)
 	structType := toPersist.Type()
 	for i := 0; i < structType.NumField(); i++ {
 		field := structType.Field(i)
-		value := toPersist.FieldByName(field.Name)
-		valueAsString, err := stringValue(value)
+		fieldValue := toPersist.FieldByName(field.Name)
+		err := mapper.insertFieldIntoRedis(id, field.Name, fieldValue)
 		if err != nil {
 			return "", err
-		}
-		reply := mapper.client.Cmd("HSET", id, field.Name, valueAsString)
-		insertCount, err := reply.Int()
-		if err != nil {
-			return "", err
-		}
-		if insertCount != 1 {
-			return "", errors.New(fmt.Sprint("Insert count should have been 1 but was %d", insertCount))
 		}
 	}
-
 	return id, nil
 }
 
-func stringValue(value reflect.Value) (string, error) {
+func (mapper StructMapper) insertFieldIntoRedis(id, fieldName string, fieldValue reflect.Value) error {
+	fieldValueAsString, err := convertFieldValueToString(fieldValue)
+	if err != nil {
+		return err
+	}
+	reply := mapper.client.Cmd("HSET", id, fieldName, fieldValueAsString)
+	insertCount, err := reply.Int()
+	if err != nil {
+		return err
+	}
+	if insertCount != 1 {
+		return errors.New(fmt.Sprint("Insert count should have been 1 but was %d", insertCount))
+	}
+	return nil
+}
+
+func convertFieldValueToString(value reflect.Value) (string, error) {
 	switch value.Kind() {
 	case reflect.String:
 		return value.String(), nil
@@ -63,34 +69,46 @@ func stringValue(value reflect.Value) (string, error) {
 	}
 }
 
-func (mapper StructMapper) Load(id string, obj interface{}) error {
-	reply := mapper.client.Cmd("HGETALL", id)
-	responseParts, err := reply.Hash()
+func (mapper StructMapper) Load(id string, structPointer interface{}) error {
+	structAsHash, err := mapper.getHashFromRedis(id)
 	if err != nil {
 		return err
 	}
 
-	pointerToInflate := reflect.ValueOf(obj)
+	pointerToInflate := reflect.ValueOf(structPointer)
 	structToInflate := reflect.Indirect(pointerToInflate)
 	typeToInflate := structToInflate.Type()
 	for i := 0; i < typeToInflate.NumField(); i++ {
 		field := typeToInflate.Field(i)
-		structFieldToInflate := structToInflate.FieldByName(field.Name)
-		value := responseParts[field.Name]
-		switch field.Type.Kind() {
-		case reflect.String:
-			structFieldToInflate.SetString(value)
-
-		case reflect.Uint64:
-			valueAsUint, err := strconv.ParseUint(value, 10, 64)
-			if err != nil {
-				return err
-			}
-			structFieldToInflate.SetUint(valueAsUint)
-		}
+		structValue := structToInflate.FieldByName(field.Name)
+		valueToSet := structAsHash[field.Name]
+		setValueOnStruct(field.Type.Kind(), structValue, valueToSet)
 	}
 
 	return nil
+}
+
+func setValueOnStruct(kind reflect.Kind, fieldValue reflect.Value, valueToSet string) error {
+	switch kind {
+	case reflect.String:
+		fieldValue.SetString(valueToSet)
+
+	case reflect.Uint64:
+		valueAsUint, err := strconv.ParseUint(valueToSet, 10, 64)
+		if err != nil {
+			return err
+		}
+		fieldValue.SetUint(valueAsUint)
+
+	default:
+		return errors.New("Unsupported Type")
+	}
+	return nil
+}
+
+func (mapper StructMapper) getHashFromRedis(id string) (map[string]string, error) {
+	reply := mapper.client.Cmd("HGETALL", id)
+	return reply.Hash()
 }
 
 func (mapper StructMapper) Close() error {
