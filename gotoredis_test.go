@@ -80,6 +80,20 @@ var _ = Describe("saving objects in Redis", func() {
 					Expect(retrievedStruct).To(Equal(savedStruct))
 				})
 			})
+
+			Context("when the struct is deleted", func() {
+
+				BeforeEach(func() {
+					err := g.Delete(id)
+					Expect(err).ToNot(HaveOccurred())
+				})
+
+				It("struct cannot be retrieved from Redis", func() {
+					var retrievedStruct SimpleStruct
+					g.Load(id, &retrievedStruct)
+					Expect(retrievedStruct).ToNot(Equal(savedStruct))
+				})
+			})
 		})
 	})
 })

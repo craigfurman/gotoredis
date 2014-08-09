@@ -66,7 +66,7 @@ func (mapper StructMapper) insertFieldIntoRedis(id, fieldName string, fieldValue
 		expectedNewRows = 1
 	}
 	if insertCount != expectedNewRows {
-		return errors.New(fmt.Sprint("Insert count should have been 1 but was %d", insertCount))
+		return errors.New(fmt.Sprintf("Insert count should have been 1 but was %d", insertCount))
 	}
 	return nil
 }
@@ -124,6 +124,18 @@ func setValueOnStruct(kind reflect.Kind, fieldValue reflect.Value, valueToSet st
 func (mapper StructMapper) getHashFromRedis(id string) (map[string]string, error) {
 	reply := mapper.client.Cmd("HGETALL", id)
 	return reply.Hash()
+}
+
+func (mapper StructMapper) Delete(id string) error {
+	reply := mapper.client.Cmd("DEL", id)
+	valuesDeleted, err := reply.Int()
+	if err != nil {
+		return err
+	}
+	if valuesDeleted != 1 {
+		return errors.New(fmt.Sprintf("Delete count should have been 1 but was %d", valuesDeleted))
+	}
+	return nil
 }
 
 func (mapper StructMapper) Close() error {
