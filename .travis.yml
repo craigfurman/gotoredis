@@ -10,4 +10,4 @@ install:
   - go install github.com/onsi/ginkgo
   - go get github.com/onsi/gomega
 
-script: ginkgo
+script: $GOPATH/bin/ginkgo
