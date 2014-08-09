@@ -6,6 +6,7 @@ go:
 install:
   - go get code.google.com/p/go-uuid/uuid
   - go get github.com/fzzy/radix/redis
+  - go get github.com/onsi/ginkgo
   - go install github.com/onsi/ginkgo
   - go get github.com/onsi/gomega
 
