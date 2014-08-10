@@ -35,11 +35,11 @@ func (mapper StructMapper) Update(id string, obj interface{}) error {
 }
 
 func (mapper StructMapper) persist(id string, obj interface{}, isUpdate bool) error {
-	toPersist := reflect.ValueOf(obj)
-	structType := toPersist.Type()
+	valueToPersist := reflect.ValueOf(obj)
+	structType := valueToPersist.Type()
 	for i := 0; i < structType.NumField(); i++ {
 		field := structType.Field(i)
-		fieldValue := toPersist.FieldByName(field.Name)
+		fieldValue := valueToPersist.FieldByName(field.Name)
 		err := mapper.insertFieldIntoRedis(id, field.Name, fieldValue, isUpdate)
 		if err != nil {
 			return err
@@ -53,6 +53,7 @@ func (mapper StructMapper) insertFieldIntoRedis(id, fieldName string, fieldValue
 	if err != nil {
 		return err
 	}
+
 	reply := mapper.client.Cmd("HSET", id, fieldName, fieldValueAsString)
 	insertCount, err := reply.Int()
 	if err != nil {
@@ -78,6 +79,9 @@ func convertFieldValueToString(value reflect.Value) (string, error) {
 
 	case reflect.Uint64:
 		return fmt.Sprintf("%d", value.Uint()), nil
+
+	case reflect.Bool:
+		return strconv.FormatBool(value.Bool()), nil
 
 	default:
 		return "", errors.New("Unsupported Type")
@@ -114,6 +118,13 @@ func setValueOnStruct(kind reflect.Kind, fieldValue reflect.Value, valueToSet st
 			return err
 		}
 		fieldValue.SetUint(valueAsUint)
+
+	case reflect.Bool:
+		boolValue, err := strconv.ParseBool(valueToSet)
+		if err != nil {
+			return err
+		}
+		fieldValue.SetBool(boolValue)
 
 	default:
 		return errors.New("Unsupported Type")

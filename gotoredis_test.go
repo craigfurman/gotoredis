@@ -10,6 +10,7 @@ import (
 type SimpleStruct struct {
 	String string
 	Uint64 uint64
+	Bool   bool
 }
 
 var _ = Describe("saving objects in Redis", func() {
@@ -38,6 +39,7 @@ var _ = Describe("saving objects in Redis", func() {
 				savedStruct = SimpleStruct{
 					String: "some string",
 					Uint64: 25,
+					Bool:   true,
 				}
 				var err error
 				id, err = g.Save(savedStruct)
