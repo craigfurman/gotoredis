@@ -20,6 +20,8 @@ type SimpleStruct struct {
 	Uint8   uint8
 	Uint    uint
 	Uintptr uintptr
+	Byte    byte
+	Rune    rune
 	Bool    bool
 }
 
@@ -59,6 +61,8 @@ var _ = Describe("saving objects in Redis", func() {
 					Uint8:   10,
 					Uint:    1,
 					Uintptr: 77,
+					Byte:    100,
+					Rune:    101,
 					Bool:    true,
 				}
 				var err error
