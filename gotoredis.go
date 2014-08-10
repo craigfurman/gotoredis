@@ -77,6 +77,9 @@ func convertFieldValueToString(value reflect.Value) (string, error) {
 	case reflect.String:
 		return value.String(), nil
 
+	case reflect.Int64, reflect.Int32, reflect.Int16, reflect.Int8, reflect.Int:
+		return fmt.Sprintf("%d", value.Int()), nil
+
 	case reflect.Uint64, reflect.Uint32, reflect.Uint16, reflect.Uint8, reflect.Uint, reflect.Uintptr:
 		return fmt.Sprintf("%d", value.Uint()), nil
 
@@ -118,6 +121,13 @@ func setValueOnStruct(kind reflect.Kind, fieldValue reflect.Value, valueToSet st
 			return err
 		}
 		fieldValue.SetUint(valueAsUint)
+
+	case reflect.Int64, reflect.Int32, reflect.Int16, reflect.Int8, reflect.Int:
+		valueAsInt, err := strconv.ParseInt(valueToSet, 10, 64)
+		if err != nil {
+			return err
+		}
+		fieldValue.SetInt(valueAsInt)
 
 	case reflect.Bool:
 		boolValue, err := strconv.ParseBool(valueToSet)

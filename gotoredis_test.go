@@ -9,6 +9,11 @@ import (
 
 type SimpleStruct struct {
 	String  string
+	Int64   int64
+	Int32   int32
+	Int16   int16
+	Int8    int8
+	Int     int
 	Uint64  uint64
 	Uint32  uint32
 	Uint16  uint16
@@ -43,6 +48,11 @@ var _ = Describe("saving objects in Redis", func() {
 			BeforeEach(func() {
 				savedStruct = SimpleStruct{
 					String:  "some string",
+					Int64:   64,
+					Int32:   32,
+					Int16:   16,
+					Int8:    8,
+					Int:     1000,
 					Uint64:  25,
 					Uint32:  9,
 					Uint16:  15,
