@@ -8,9 +8,14 @@ import (
 )
 
 type SimpleStruct struct {
-	String string
-	Uint64 uint64
-	Bool   bool
+	String  string
+	Uint64  uint64
+	Uint32  uint32
+	Uint16  uint16
+	Uint8   uint8
+	Uint    uint
+	Uintptr uintptr
+	Bool    bool
 }
 
 var _ = Describe("saving objects in Redis", func() {
@@ -37,9 +42,14 @@ var _ = Describe("saving objects in Redis", func() {
 
 			BeforeEach(func() {
 				savedStruct = SimpleStruct{
-					String: "some string",
-					Uint64: 25,
-					Bool:   true,
+					String:  "some string",
+					Uint64:  25,
+					Uint32:  9,
+					Uint16:  15,
+					Uint8:   10,
+					Uint:    1,
+					Uintptr: 77,
+					Bool:    true,
 				}
 				var err error
 				id, err = g.Save(savedStruct)
