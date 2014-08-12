@@ -8,23 +8,25 @@ import (
 )
 
 type SimpleStruct struct {
-	String  string
-	Int64   int64
-	Int32   int32
-	Int16   int16
-	Int8    int8
-	Int     int
-	Uint64  uint64
-	Uint32  uint32
-	Uint16  uint16
-	Uint8   uint8
-	Uint    uint
-	Uintptr uintptr
-	Byte    byte
-	Rune    rune
-	Float32 float32
-	Float64 float64
-	Bool    bool
+	String     string
+	Int64      int64
+	Int32      int32
+	Int16      int16
+	Int8       int8
+	Int        int
+	Uint64     uint64
+	Uint32     uint32
+	Uint16     uint16
+	Uint8      uint8
+	Uint       uint
+	Uintptr    uintptr
+	Byte       byte
+	Rune       rune
+	Float32    float32
+	Float64    float64
+	Complex64  complex64
+	Complex128 complex128
+	Bool       bool
 }
 
 var _ = Describe("saving objects in Redis", func() {
@@ -50,24 +52,30 @@ var _ = Describe("saving objects in Redis", func() {
 			var savedStruct SimpleStruct
 
 			BeforeEach(func() {
+				var c64r float32 = 1.0
+				var c64i float32 = 1.1
+				var c128r float64 = 1.2
+				var c128i float64 = 1.3
 				savedStruct = SimpleStruct{
-					String:  "some string",
-					Int64:   64,
-					Int32:   32,
-					Int16:   16,
-					Int8:    8,
-					Int:     1000,
-					Uint64:  25,
-					Uint32:  9,
-					Uint16:  15,
-					Uint8:   10,
-					Uint:    1,
-					Uintptr: 77,
-					Byte:    100,
-					Rune:    101,
-					Float32: 1.1,
-					Float64: 1.2,
-					Bool:    true,
+					String:     "some string",
+					Int64:      64,
+					Int32:      32,
+					Int16:      16,
+					Int8:       8,
+					Int:        1000,
+					Uint64:     25,
+					Uint32:     9,
+					Uint16:     15,
+					Uint8:      10,
+					Uint:       1,
+					Uintptr:    77,
+					Byte:       100,
+					Rune:       101,
+					Float32:    1.1,
+					Float64:    1.2,
+					Complex64:  complex(c64r, c64i),
+					Complex128: complex(c128r, c128i),
+					Bool:       true,
 				}
 				var err error
 				id, err = g.Save(savedStruct)

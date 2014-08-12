@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"regexp"
 	"strconv"
 
 	"code.google.com/p/go-uuid/uuid"
@@ -86,6 +87,9 @@ func convertFieldValueToString(value reflect.Value) (string, error) {
 	case reflect.Float32, reflect.Float64:
 		return fmt.Sprintf("%f", value.Float()), nil
 
+	case reflect.Complex64, reflect.Complex128:
+		return fmt.Sprintf("%f", value.Complex()), nil
+
 	case reflect.Bool:
 		return strconv.FormatBool(value.Bool()), nil
 
@@ -138,6 +142,25 @@ func setValueOnStruct(kind reflect.Kind, fieldValue reflect.Value, valueToSet st
 			return err
 		}
 		fieldValue.SetFloat(valueAsFloat)
+
+	case reflect.Complex64, reflect.Complex128:
+		regex, err := regexp.Compile("[\\d\\.]+")
+		if err != nil {
+			return err
+		}
+		components := regex.FindAllString(valueToSet, -1)
+		if len(components) != 2 {
+			return errors.New(fmt.Sprintf("%s is not a complex number", valueToSet))
+		}
+		r, err := strconv.ParseFloat(components[0], 64)
+		if err != nil {
+			return err
+		}
+		i, err := strconv.ParseFloat(components[1], 64)
+		if err != nil {
+			return err
+		}
+		fieldValue.SetComplex(complex(r, i))
 
 	case reflect.Bool:
 		boolValue, err := strconv.ParseBool(valueToSet)
