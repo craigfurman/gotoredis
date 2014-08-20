@@ -1,7 +1,7 @@
 package gotoredis_test
 
 import (
-	"github.com/craigfurman/gotoredis"
+	. "github.com/craigfurman/gotoredis"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -31,12 +31,12 @@ type SimpleStruct struct {
 
 var _ = Describe("saving objects in Redis", func() {
 
-	var g *gotoredis.StructMapper
+	var g *StructMapper
 
 	Context("when Redis is running on expected host and port", func() {
 
 		BeforeEach(func() {
-			client, err := gotoredis.New("localhost:6379")
+			client, err := New("localhost:6379")
 			g = client
 			Expect(err).ToNot(HaveOccurred())
 		})
