@@ -96,7 +96,14 @@ func (mapper redisStructMapper) persist(id string, obj interface{}) error {
 
 func (mapper redisStructMapper) getHashFromRedis(id string) (map[string]string, error) {
 	reply := mapper.client.Cmd("HGETALL", id)
-	return reply.Hash()
+	hash, err := reply.Hash()
+	if err != nil {
+		return nil, err
+	}
+	if len(hash) < 1 {
+		return nil, errors.New(fmt.Sprintf("No Redis hash found for key %s", id))
+	}
+	return hash, nil
 }
 
 func loadFields(structType reflect.Type, toFill reflect.Value, structAsHash map[string]string) {

@@ -126,6 +126,14 @@ var _ = Describe("saving objects in Redis", func() {
 				})
 			})
 		})
+
+		Describe("trying to retrieve a struct that has not been saved in Redis", func() {
+
+			It("returns an error", func() {
+				err := g.Load("foo", new(SimpleStruct))
+				Expect(err).To(HaveOccurred())
+			})
+		})
 	})
 
 	Context("when Redis is not running on the supplied host and port", func() {
