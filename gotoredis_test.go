@@ -33,7 +33,7 @@ var _ = Describe("saving objects in Redis", func() {
 
 	var g StructMapper
 
-	Context("when Redis is running on expected host and port", func() {
+	Context("when Redis is running on supplied host and port", func() {
 
 		BeforeEach(func() {
 			client, err := New("localhost:6379")
@@ -125,6 +125,14 @@ var _ = Describe("saving objects in Redis", func() {
 					Expect(retrievedStruct).ToNot(Equal(savedStruct))
 				})
 			})
+		})
+	})
+
+	Context("when Redis is not running on the supplied host and port", func() {
+
+		It("returns an error", func() {
+			_, err := New("localhost:9999")
+			Expect(err).To(HaveOccurred())
 		})
 	})
 })
