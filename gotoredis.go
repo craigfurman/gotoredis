@@ -28,14 +28,14 @@ func New(redisEndpoint string) (*StructMapper, error) {
 
 func (mapper StructMapper) Save(obj interface{}) (string, error) {
 	id := uuid.New()
-	return id, mapper.persist(id, obj, false)
+	return id, mapper.persist(id, obj)
 }
 
 func (mapper StructMapper) Update(id string, obj interface{}) error {
-	return mapper.persist(id, obj, true)
+	return mapper.persist(id, obj)
 }
 
-func (mapper StructMapper) persist(id string, obj interface{}, isUpdate bool) error {
+func (mapper StructMapper) persist(id string, obj interface{}) error {
 	valueToPersist := reflect.ValueOf(obj)
 	structType := valueToPersist.Type()
 
