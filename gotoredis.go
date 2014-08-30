@@ -38,39 +38,21 @@ func (mapper StructMapper) Update(id string, obj interface{}) error {
 func (mapper StructMapper) persist(id string, obj interface{}, isUpdate bool) error {
 	valueToPersist := reflect.ValueOf(obj)
 	structType := valueToPersist.Type()
+
+	redisCmdArgs := []string{id}
 	for i := 0; i < structType.NumField(); i++ {
 		field := structType.Field(i)
 		fieldValue := valueToPersist.FieldByName(field.Name)
-		err := mapper.insertFieldIntoRedis(id, field.Name, fieldValue, isUpdate)
+		fieldValueAsString, err := convertFieldValueToString(fieldValue)
 		if err != nil {
 			return err
 		}
-	}
-	return nil
-}
-
-func (mapper StructMapper) insertFieldIntoRedis(id, fieldName string, fieldValue reflect.Value, isUpdate bool) error {
-	fieldValueAsString, err := convertFieldValueToString(fieldValue)
-	if err != nil {
-		return err
+		redisCmdArgs = append(redisCmdArgs, field.Name, fieldValueAsString)
 	}
 
-	reply := mapper.client.Cmd("HSET", id, fieldName, fieldValueAsString)
-	insertCount, err := reply.Int()
-	if err != nil {
-		return err
-	}
-
-	var expectedNewRows int = -1
-	if isUpdate {
-		expectedNewRows = 0
-	} else {
-		expectedNewRows = 1
-	}
-	if insertCount != expectedNewRows {
-		return errors.New(fmt.Sprintf("Insert count should have been 1 but was %d", insertCount))
-	}
-	return nil
+	reply := mapper.client.Cmd("HMSET", redisCmdArgs)
+	_, err := reply.Str()
+	return err
 }
 
 func convertFieldValueToString(value reflect.Value) (string, error) {
