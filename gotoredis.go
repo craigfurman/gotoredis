@@ -3,6 +3,7 @@ package gotoredis
 import (
 	"errors"
 	"fmt"
+	"io"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -11,31 +12,39 @@ import (
 	"github.com/fzzy/radix/redis"
 )
 
-type StructMapper struct {
+type StructMapper interface {
+	Save(obj interface{}) (string, error)
+	Load(id string, structPointer interface{}) error
+	Update(id string, obj interface{}) error
+	Delete(id string) error
+	io.Closer
+}
+
+type redisStructMapper struct {
 	client *redis.Client
 }
 
-func New(redisEndpoint string) (*StructMapper, error) {
+func New(redisEndpoint string) (StructMapper, error) {
 	redisClient, err := redis.Dial("tcp", redisEndpoint)
 	if err != nil {
 		return nil, err
 	}
 
-	return &StructMapper{
+	return &redisStructMapper{
 		client: redisClient,
 	}, nil
 }
 
-func (mapper StructMapper) Save(obj interface{}) (string, error) {
+func (mapper redisStructMapper) Save(obj interface{}) (string, error) {
 	id := uuid.New()
 	return id, mapper.persist(id, obj)
 }
 
-func (mapper StructMapper) Update(id string, obj interface{}) error {
+func (mapper redisStructMapper) Update(id string, obj interface{}) error {
 	return mapper.persist(id, obj)
 }
 
-func (mapper StructMapper) persist(id string, obj interface{}) error {
+func (mapper redisStructMapper) persist(id string, obj interface{}) error {
 	valueToPersist := reflect.ValueOf(obj)
 	structType := valueToPersist.Type()
 
@@ -80,7 +89,7 @@ func convertFieldValueToString(value reflect.Value) (string, error) {
 	}
 }
 
-func (mapper StructMapper) Load(id string, structPointer interface{}) error {
+func (mapper redisStructMapper) Load(id string, structPointer interface{}) error {
 	structAsHash, err := mapper.getHashFromRedis(id)
 	if err != nil {
 		return err
@@ -157,12 +166,12 @@ func setValueOnStruct(kind reflect.Kind, fieldValue reflect.Value, valueToSet st
 	return nil
 }
 
-func (mapper StructMapper) getHashFromRedis(id string) (map[string]string, error) {
+func (mapper redisStructMapper) getHashFromRedis(id string) (map[string]string, error) {
 	reply := mapper.client.Cmd("HGETALL", id)
 	return reply.Hash()
 }
 
-func (mapper StructMapper) Delete(id string) error {
+func (mapper redisStructMapper) Delete(id string) error {
 	reply := mapper.client.Cmd("DEL", id)
 	valuesDeleted, err := reply.Int()
 	if err != nil {
@@ -174,6 +183,6 @@ func (mapper StructMapper) Delete(id string) error {
 	return nil
 }
 
-func (mapper StructMapper) Close() error {
+func (mapper redisStructMapper) Close() error {
 	return mapper.client.Close()
 }

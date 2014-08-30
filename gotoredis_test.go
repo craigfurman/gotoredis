@@ -31,7 +31,7 @@ type SimpleStruct struct {
 
 var _ = Describe("saving objects in Redis", func() {
 
-	var g *StructMapper
+	var g StructMapper
 
 	Context("when Redis is running on expected host and port", func() {
 
