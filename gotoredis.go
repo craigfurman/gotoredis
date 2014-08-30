@@ -40,8 +40,38 @@ func (mapper redisStructMapper) Save(obj interface{}) (string, error) {
 	return id, mapper.persist(id, obj)
 }
 
+func (mapper redisStructMapper) Load(id string, structPointer interface{}) error {
+	structAsHash, err := mapper.getHashFromRedis(id)
+	if err != nil {
+		return err
+	}
+
+	pointerToFill := reflect.ValueOf(structPointer)
+	toFill := reflect.Indirect(pointerToFill)
+	structType := toFill.Type()
+	loadFields(structType, toFill, structAsHash)
+
+	return nil
+}
+
 func (mapper redisStructMapper) Update(id string, obj interface{}) error {
 	return mapper.persist(id, obj)
+}
+
+func (mapper redisStructMapper) Delete(id string) error {
+	reply := mapper.client.Cmd("DEL", id)
+	valuesDeleted, err := reply.Int()
+	if err != nil {
+		return err
+	}
+	if valuesDeleted != 1 {
+		return errors.New(fmt.Sprintf("Delete count should have been 1 but was %d", valuesDeleted))
+	}
+	return nil
+}
+
+func (mapper redisStructMapper) Close() error {
+	return mapper.client.Close()
 }
 
 func (mapper redisStructMapper) persist(id string, obj interface{}) error {
@@ -62,6 +92,20 @@ func (mapper redisStructMapper) persist(id string, obj interface{}) error {
 	reply := mapper.client.Cmd("HMSET", redisCmdArgs)
 	_, err := reply.Str()
 	return err
+}
+
+func (mapper redisStructMapper) getHashFromRedis(id string) (map[string]string, error) {
+	reply := mapper.client.Cmd("HGETALL", id)
+	return reply.Hash()
+}
+
+func loadFields(structType reflect.Type, toFill reflect.Value, structAsHash map[string]string) {
+	for i := 0; i < structType.NumField(); i++ {
+		field := structType.Field(i)
+		fieldToFill := toFill.FieldByName(field.Name)
+		fieldValue := structAsHash[field.Name]
+		setValueOnStruct(field.Type.Kind(), fieldToFill, fieldValue)
+	}
 }
 
 func convertFieldValueToString(value reflect.Value) (string, error) {
@@ -87,25 +131,6 @@ func convertFieldValueToString(value reflect.Value) (string, error) {
 	default:
 		return "", errors.New("Unsupported Type")
 	}
-}
-
-func (mapper redisStructMapper) Load(id string, structPointer interface{}) error {
-	structAsHash, err := mapper.getHashFromRedis(id)
-	if err != nil {
-		return err
-	}
-
-	pointerToInflate := reflect.ValueOf(structPointer)
-	structToInflate := reflect.Indirect(pointerToInflate)
-	typeToInflate := structToInflate.Type()
-	for i := 0; i < typeToInflate.NumField(); i++ {
-		field := typeToInflate.Field(i)
-		structValue := structToInflate.FieldByName(field.Name)
-		valueToSet := structAsHash[field.Name]
-		setValueOnStruct(field.Type.Kind(), structValue, valueToSet)
-	}
-
-	return nil
 }
 
 func setValueOnStruct(kind reflect.Kind, fieldValue reflect.Value, valueToSet string) error {
@@ -164,25 +189,4 @@ func setValueOnStruct(kind reflect.Kind, fieldValue reflect.Value, valueToSet st
 		return errors.New("Unsupported Type")
 	}
 	return nil
-}
-
-func (mapper redisStructMapper) getHashFromRedis(id string) (map[string]string, error) {
-	reply := mapper.client.Cmd("HGETALL", id)
-	return reply.Hash()
-}
-
-func (mapper redisStructMapper) Delete(id string) error {
-	reply := mapper.client.Cmd("DEL", id)
-	valuesDeleted, err := reply.Int()
-	if err != nil {
-		return err
-	}
-	if valuesDeleted != 1 {
-		return errors.New(fmt.Sprintf("Delete count should have been 1 but was %d", valuesDeleted))
-	}
-	return nil
-}
-
-func (mapper redisStructMapper) Close() error {
-	return mapper.client.Close()
 }
