@@ -31,13 +31,13 @@ type SimpleStruct struct {
 
 var _ = Describe("saving objects in Redis", func() {
 
-	var g StructMapper
+	var g *StructMapper
 
 	Context("when Redis is running on supplied host and port", func() {
 
 		BeforeEach(func() {
-			client, err := New("localhost:6379")
-			g = client
+			var err error
+			g, err = New("localhost:6379")
 			Expect(err).ToNot(HaveOccurred())
 		})
 
