@@ -1,7 +1,9 @@
 package gotoredis_test
 
 import (
-	. "github.com/craigfurman/gotoredis"
+	"code.google.com/p/go-uuid/uuid"
+
+	"github.com/craigfurman/gotoredis"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -31,13 +33,13 @@ type SimpleStruct struct {
 
 var _ = Describe("saving objects in Redis", func() {
 
-	var g *StructMapper
+	var g *gotoredis.StructMapper
 
 	Context("when Redis is running on supplied host and port", func() {
 
 		BeforeEach(func() {
 			var err error
-			g, err = New("localhost:6379")
+			g, err = gotoredis.New("localhost:6379")
 			Expect(err).ToNot(HaveOccurred())
 		})
 
@@ -46,12 +48,14 @@ var _ = Describe("saving objects in Redis", func() {
 			Expect(err).ToNot(HaveOccurred())
 		})
 
-		Context("when a struct has already been saved in Redis", func() {
+		Context("when a struct is saved", func() {
 
 			var id string
 			var savedStruct SimpleStruct
 
 			BeforeEach(func() {
+				id = uuid.New()
+
 				var c64r float32 = 1.0
 				var c64i float32 = 1.1
 				var c128r float64 = 1.2
@@ -78,7 +82,7 @@ var _ = Describe("saving objects in Redis", func() {
 					Bool:       true,
 				}
 				var err error
-				id, err = g.Save(savedStruct)
+				err = g.Save(id, savedStruct)
 				Expect(err).ToNot(HaveOccurred())
 			})
 
@@ -139,7 +143,7 @@ var _ = Describe("saving objects in Redis", func() {
 	Context("when Redis is not running on the supplied host and port", func() {
 
 		It("returns an error", func() {
-			_, err := New("localhost:9999")
+			_, err := gotoredis.New("localhost:9999")
 			Expect(err).To(HaveOccurred())
 		})
 	})

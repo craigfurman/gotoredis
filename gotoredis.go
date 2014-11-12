@@ -7,7 +7,6 @@ import (
 	"regexp"
 	"strconv"
 
-	"code.google.com/p/go-uuid/uuid"
 	"github.com/fzzy/radix/redis"
 )
 
@@ -26,9 +25,8 @@ func New(redisEndpoint string) (*StructMapper, error) {
 	}, nil
 }
 
-func (mapper StructMapper) Save(obj interface{}) (string, error) {
-	id := uuid.New()
-	return id, mapper.persist(id, obj)
+func (mapper StructMapper) Save(key string, obj interface{}) error {
+	return mapper.persist(key, obj)
 }
 
 func (mapper StructMapper) Load(id string, structPointer interface{}) error {
