@@ -26,7 +26,23 @@ func New(redisEndpoint string) (*StructMapper, error) {
 }
 
 func (mapper StructMapper) Save(key string, obj interface{}) error {
-	return mapper.persist(key, obj)
+	valueToPersist := reflect.ValueOf(obj)
+	structType := valueToPersist.Type()
+
+	redisCmdArgs := []string{key}
+	for i := 0; i < structType.NumField(); i++ {
+		field := structType.Field(i)
+		fieldValue := valueToPersist.FieldByName(field.Name)
+		fieldValueAsString, err := convertFieldValueToString(fieldValue)
+		if err != nil {
+			return err
+		}
+		redisCmdArgs = append(redisCmdArgs, field.Name, fieldValueAsString)
+	}
+
+	reply := mapper.client.Cmd("HMSET", redisCmdArgs)
+	_, err := reply.Str()
+	return err
 }
 
 func (mapper StructMapper) Load(id string, structPointer interface{}) error {
@@ -43,10 +59,6 @@ func (mapper StructMapper) Load(id string, structPointer interface{}) error {
 	return nil
 }
 
-func (mapper StructMapper) Update(id string, obj interface{}) error {
-	return mapper.persist(id, obj)
-}
-
 func (mapper StructMapper) Delete(id string) error {
 	reply := mapper.client.Cmd("DEL", id)
 	valuesDeleted, err := reply.Int()
@@ -61,26 +73,6 @@ func (mapper StructMapper) Delete(id string) error {
 
 func (mapper StructMapper) Close() error {
 	return mapper.client.Close()
-}
-
-func (mapper StructMapper) persist(id string, obj interface{}) error {
-	valueToPersist := reflect.ValueOf(obj)
-	structType := valueToPersist.Type()
-
-	redisCmdArgs := []string{id}
-	for i := 0; i < structType.NumField(); i++ {
-		field := structType.Field(i)
-		fieldValue := valueToPersist.FieldByName(field.Name)
-		fieldValueAsString, err := convertFieldValueToString(fieldValue)
-		if err != nil {
-			return err
-		}
-		redisCmdArgs = append(redisCmdArgs, field.Name, fieldValueAsString)
-	}
-
-	reply := mapper.client.Cmd("HMSET", redisCmdArgs)
-	_, err := reply.Str()
-	return err
 }
 
 func (mapper StructMapper) getHashFromRedis(id string) (map[string]string, error) {
