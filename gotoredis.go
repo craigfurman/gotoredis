@@ -29,71 +29,25 @@ func (mapper StructMapper) Save(key string, obj interface{}) error {
 	valueToPersist := reflect.ValueOf(obj)
 	structType := valueToPersist.Type()
 
-	redisCmdArgs := []string{key}
+	objectHash := map[string]string{}
 	for i := 0; i < structType.NumField(); i++ {
 		field := structType.Field(i)
-		fieldValue := valueToPersist.FieldByName(field.Name)
+		fieldName := field.Name
+		fieldValue := valueToPersist.FieldByName(fieldName)
 		fieldValueAsString, err := convertFieldValueToString(fieldValue)
 		if err != nil {
 			return err
 		}
-		redisCmdArgs = append(redisCmdArgs, field.Name, fieldValueAsString)
+		objectHash[fieldName] = fieldValueAsString
 	}
 
+	redisCmdArgs := []string{key}
+	for key, value := range objectHash {
+		redisCmdArgs = append(redisCmdArgs, key, value)
+	}
 	reply := mapper.client.Cmd("HMSET", redisCmdArgs)
 	_, err := reply.Str()
 	return err
-}
-
-func (mapper StructMapper) Load(id string, structPointer interface{}) error {
-	structAsHash, err := mapper.getHashFromRedis(id)
-	if err != nil {
-		return err
-	}
-
-	pointerToFill := reflect.ValueOf(structPointer)
-	toFill := reflect.Indirect(pointerToFill)
-	structType := toFill.Type()
-	loadFields(structType, toFill, structAsHash)
-
-	return nil
-}
-
-func (mapper StructMapper) Delete(id string) error {
-	reply := mapper.client.Cmd("DEL", id)
-	valuesDeleted, err := reply.Int()
-	if err != nil {
-		return err
-	}
-	if valuesDeleted != 1 {
-		return errors.New(fmt.Sprintf("Delete count should have been 1 but was %d", valuesDeleted))
-	}
-	return nil
-}
-
-func (mapper StructMapper) Close() error {
-	return mapper.client.Close()
-}
-
-func (mapper StructMapper) getHashFromRedis(id string) (map[string]string, error) {
-	reply := mapper.client.Cmd("HGETALL", id)
-	hash, err := reply.Hash()
-	if err != nil {
-		return nil, err
-	}
-	if len(hash) < 1 {
-		return nil, errors.New(fmt.Sprintf("No Redis hash found for key %s", id))
-	}
-	return hash, nil
-}
-
-func loadFields(structType reflect.Type, toFill reflect.Value, structAsHash map[string]string) {
-	for i := 0; i < structType.NumField(); i++ {
-		field := structType.Field(i)
-		fieldToFill := toFill.FieldByName(field.Name)
-		fieldValue := structAsHash[field.Name]
-		setValueOnStruct(field.Type.Kind(), fieldToFill, fieldValue)
-	}
 }
 
 func convertFieldValueToString(value reflect.Value) (string, error) {
@@ -118,6 +72,29 @@ func convertFieldValueToString(value reflect.Value) (string, error) {
 
 	default:
 		return "", errors.New("Unsupported Type")
+	}
+}
+
+func (mapper StructMapper) Load(id string, structPointer interface{}) error {
+	structAsHash, err := mapper.getHashFromRedis(id)
+	if err != nil {
+		return err
+	}
+
+	pointerToFill := reflect.ValueOf(structPointer)
+	toFill := reflect.Indirect(pointerToFill)
+	structType := toFill.Type()
+	loadFields(structType, toFill, structAsHash)
+
+	return nil
+}
+
+func loadFields(structType reflect.Type, toFill reflect.Value, structAsHash map[string]string) {
+	for i := 0; i < structType.NumField(); i++ {
+		field := structType.Field(i)
+		fieldToFill := toFill.FieldByName(field.Name)
+		fieldValue := structAsHash[field.Name]
+		setValueOnStruct(field.Type.Kind(), fieldToFill, fieldValue)
 	}
 }
 
@@ -177,4 +154,32 @@ func setValueOnStruct(kind reflect.Kind, fieldValue reflect.Value, valueToSet st
 		return errors.New("Unsupported Type")
 	}
 	return nil
+}
+
+func (mapper StructMapper) Delete(id string) error {
+	reply := mapper.client.Cmd("DEL", id)
+	valuesDeleted, err := reply.Int()
+	if err != nil {
+		return err
+	}
+	if valuesDeleted != 1 {
+		return errors.New(fmt.Sprintf("Delete count should have been 1 but was %d", valuesDeleted))
+	}
+	return nil
+}
+
+func (mapper StructMapper) Close() error {
+	return mapper.client.Close()
+}
+
+func (mapper StructMapper) getHashFromRedis(id string) (map[string]string, error) {
+	reply := mapper.client.Cmd("HGETALL", id)
+	hash, err := reply.Hash()
+	if err != nil {
+		return nil, err
+	}
+	if len(hash) < 1 {
+		return nil, errors.New(fmt.Sprintf("No Redis hash found for key %s", id))
+	}
+	return hash, nil
 }
