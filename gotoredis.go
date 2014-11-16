@@ -26,53 +26,35 @@ func New(redisEndpoint string) (*StructMapper, error) {
 }
 
 func (mapper StructMapper) Save(key string, obj interface{}) error {
-	valueToPersist := reflect.ValueOf(obj)
-	structType := valueToPersist.Type()
+	structToPersist := reflect.ValueOf(obj)
+	structType := structToPersist.Type()
+	objectHash := toHash(structType, structToPersist)
+	return mapper.saveInRedis(key, objectHash)
+}
 
-	objectHash := map[string]string{}
-	for i := 0; i < structType.NumField(); i++ {
-		field := structType.Field(i)
-		fieldName := field.Name
-		fieldValue := valueToPersist.FieldByName(fieldName)
-		fieldValueAsString, err := convertFieldValueToString(fieldValue)
-		if err != nil {
-			return err
-		}
-		objectHash[fieldName] = fieldValueAsString
-	}
-
-	redisCmdArgs := []string{key}
-	for key, value := range objectHash {
-		redisCmdArgs = append(redisCmdArgs, key, value)
-	}
+func (mapper StructMapper) saveInRedis(key string, objectHash map[string]interface{}) error {
+	redisCmdArgs := toRedisHmsetArgs(key, objectHash)
 	reply := mapper.client.Cmd("HMSET", redisCmdArgs)
 	_, err := reply.Str()
 	return err
 }
 
-func convertFieldValueToString(value reflect.Value) (string, error) {
-	switch value.Kind() {
-	case reflect.String:
-		return value.String(), nil
-
-	case reflect.Int64, reflect.Int32, reflect.Int16, reflect.Int8, reflect.Int:
-		return fmt.Sprintf("%d", value.Int()), nil
-
-	case reflect.Uint64, reflect.Uint32, reflect.Uint16, reflect.Uint8, reflect.Uint, reflect.Uintptr:
-		return fmt.Sprintf("%d", value.Uint()), nil
-
-	case reflect.Float32, reflect.Float64:
-		return fmt.Sprintf("%f", value.Float()), nil
-
-	case reflect.Complex64, reflect.Complex128:
-		return fmt.Sprintf("%f", value.Complex()), nil
-
-	case reflect.Bool:
-		return strconv.FormatBool(value.Bool()), nil
-
-	default:
-		return "", errors.New("Unsupported Type")
+func toHash(typeToPersist reflect.Type, valueToPersist reflect.Value) map[string]interface{} {
+	objectHash := make(map[string]interface{})
+	for i := 0; i < typeToPersist.NumField(); i++ {
+		fieldName := typeToPersist.Field(i).Name
+		fieldValue := valueToPersist.FieldByName(fieldName).Interface()
+		objectHash[fieldName] = fieldValue
 	}
+	return objectHash
+}
+
+func toRedisHmsetArgs(key string, hash map[string]interface{}) []interface{} {
+	redisCmdArgs := []interface{}{key}
+	for key, value := range hash {
+		redisCmdArgs = append(redisCmdArgs, key, value)
+	}
+	return redisCmdArgs
 }
 
 func (mapper StructMapper) Load(id string, structPointer interface{}) error {
