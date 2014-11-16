@@ -35,19 +35,27 @@ type SimpleStruct struct {
 
 var _ = Describe("saving objects in Redis", func() {
 
-	var g *gotoredis.StructMapper
-
 	Context("when Redis is running on supplied host and port", func() {
 
+		var (
+			g          *gotoredis.StructMapper
+			connectErr error
+		)
+
 		BeforeEach(func() {
-			var err error
-			g, err = gotoredis.New("localhost:6379")
-			Expect(err).ToNot(HaveOccurred())
+			g, connectErr = gotoredis.New("localhost:6379")
 		})
 
 		AfterEach(func() {
 			err := g.Close()
 			Expect(err).ToNot(HaveOccurred())
+		})
+
+		Describe("Creating a gotoredis client", func() {
+
+			It("does not error", func() {
+				Expect(connectErr).NotTo(HaveOccurred())
+			})
 		})
 
 		Context("when a struct is saved", func() {

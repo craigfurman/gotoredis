@@ -64,18 +64,30 @@ func (mapper StructMapper) Load(id string, structPointer interface{}) error {
 	}
 
 	pointerToFill := reflect.ValueOf(structPointer)
-	toFill := reflect.Indirect(pointerToFill)
-	structType := toFill.Type()
-	loadFields(structType, toFill, structAsHash)
-
+	structToFill := reflect.Indirect(pointerToFill)
+	structType := structToFill.Type()
+	loadFields(structType, structToFill, structAsHash)
 	return nil
 }
 
-func loadFields(structType reflect.Type, toFill reflect.Value, structAsHash map[string]string) {
+func (mapper StructMapper) getHashFromRedis(id string) (map[string]string, error) {
+	reply := mapper.client.Cmd("HGETALL", id)
+	hash, err := reply.Hash()
+	if err != nil {
+		return nil, err
+	}
+	if len(hash) < 1 {
+		return nil, errors.New(fmt.Sprintf("No Redis hash found for key %s", id))
+	}
+	return hash, nil
+}
+
+func loadFields(structType reflect.Type, structToFill reflect.Value, structAsHash map[string]string) {
 	for i := 0; i < structType.NumField(); i++ {
 		field := structType.Field(i)
-		fieldToFill := toFill.FieldByName(field.Name)
-		fieldValue := structAsHash[field.Name]
+		fieldName := field.Name
+		fieldToFill := structToFill.FieldByName(fieldName)
+		fieldValue := structAsHash[fieldName]
 		setValueOnStruct(field.Type.Kind(), fieldToFill, fieldValue)
 	}
 }
@@ -152,16 +164,4 @@ func (mapper StructMapper) Delete(id string) error {
 
 func (mapper StructMapper) Close() error {
 	return mapper.client.Close()
-}
-
-func (mapper StructMapper) getHashFromRedis(id string) (map[string]string, error) {
-	reply := mapper.client.Cmd("HGETALL", id)
-	hash, err := reply.Hash()
-	if err != nil {
-		return nil, err
-	}
-	if len(hash) < 1 {
-		return nil, errors.New(fmt.Sprintf("No Redis hash found for key %s", id))
-	}
-	return hash, nil
 }
